@@ -167,163 +167,225 @@ export default function PrivateMeeting() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-12rem)] flex flex-col">
-      <div className="max-w-7xl mx-auto w-full px-6 flex-1 flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-10">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-brand/20 rounded-2xl flex items-center justify-center border border-brand/30">
-              <Lock className="w-6 h-6 text-brand" />
+    <div className="relative min-h-[calc(100vh-4rem)] bg-[#0a0502] overflow-hidden font-sans">
+      {/* Cinematic Background Elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-brand/10 blur-[120px] rounded-full animate-pulse" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-brand/5 blur-[120px] rounded-full animate-pulse delay-700" />
+        <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(#fff 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+      </div>
+
+      <div className="relative z-10 max-w-7xl mx-auto w-full px-4 sm:px-6 h-full flex flex-col py-6">
+        {/* Modern Header */}
+        <motion.div 
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          className="flex flex-col sm:flex-row items-center justify-between gap-6 mb-10 bg-white/5 backdrop-blur-xl border border-white/10 p-6 rounded-[2rem]"
+        >
+          <div className="flex items-center gap-5">
+            <div className="relative">
+              <div className="w-14 h-14 rounded-2xl bg-brand/20 flex items-center justify-center border border-brand/30 shadow-[0_0_20px_rgba(255,78,0,0.2)]">
+                <Shield className="w-7 h-7 text-brand" />
+              </div>
+              <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-[#0a0502] animate-pulse" />
             </div>
             <div>
-              <h1 className="text-2xl font-display font-black tracking-tight uppercase italic">Reunión Privada</h1>
-              <div className="flex items-center gap-2 text-[10px] font-mono text-white/40 uppercase tracking-widest">
-                <Shield className="w-3 h-3 text-emerald-500" />
-                <span>Encriptación de extremo a extremo</span>
+              <h1 className="text-2xl font-display font-black tracking-tight text-white uppercase italic">Sala Mixe Privada</h1>
+              <div className="flex items-center gap-2 text-[10px] font-mono text-white/40 uppercase tracking-widest mt-1">
+                <Lock className="w-3 h-3 text-emerald-500" />
+                <span>Encriptación punto a punto habilitada</span>
               </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="bg-white/5 border border-white/10 px-4 py-2 rounded-xl flex items-center gap-3">
+          <div className="flex items-center gap-4">
+            <div className="hidden md:flex items-center gap-3 px-5 py-2.5 rounded-2xl bg-white/5 border border-white/10">
               <Users className="w-4 h-4 text-brand" />
-              <span className="text-xs font-mono font-bold">{participants.length + 1} Participantes</span>
+              <span className="text-xs font-mono font-bold text-white/80">{participants.length + 1} Conectados</span>
             </div>
             <button 
               onClick={copyLink}
-              className="flex items-center gap-2 bg-brand/10 border border-brand/20 px-4 py-2 rounded-xl text-brand text-[10px] font-black uppercase tracking-widest hover:bg-brand hover:text-white transition-all"
+              className="flex items-center gap-2 bg-brand/10 hover:bg-brand/20 border border-brand/20 px-5 py-2.5 rounded-2xl text-brand text-[10px] font-black uppercase tracking-widest transition-all hover:scale-105 active:scale-95 group"
             >
-              {isCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-              <span>{isCopied ? 'Copiado' : 'Copiar Enlace'}</span>
+              {isCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4 group-hover:rotate-12 transition-transform" />}
+              <span>{isCopied ? 'Enlace Copiado' : 'Invitar a la Sala'}</span>
             </button>
           </div>
-        </div>
+        </motion.div>
 
-        {/* Video Grid */}
-        <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10 min-h-[500px]">
-          {/* Local Participant */}
-          <div className="relative group aspect-video bg-white/5 rounded-[2.5rem] border border-white/10 overflow-hidden shadow-2xl">
-            <div id="local-video-container" className="w-full h-full" />
-            {isVideoOff && (
-              <div className="absolute inset-0 flex items-center justify-center bg-[#0a0502]">
-                <div className="w-24 h-24 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
-                  <VideoOff className="w-10 h-10 text-white/20" />
-                </div>
-              </div>
-            )}
-            <div className="absolute bottom-6 left-6 right-6 flex items-center justify-between z-20">
-              <div className="bg-black/60 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 flex items-center gap-2">
-                <div className="w-2 h-2 bg-brand rounded-full animate-pulse" />
-                <span className="text-[10px] font-black uppercase tracking-widest italic">{user?.displayName || 'Tú'} (Anfitrión)</span>
-              </div>
-              {isMuted && (
-                <div className="bg-red-500/80 backdrop-blur-md p-2 rounded-lg border border-red-500/50">
-                  <MicOff className="w-3 h-3 text-white" />
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Remote Participants */}
-          <div id="remote-video-container" className="contents" />
-          {participants.map(p => (
-            <div 
-              key={p.sid} 
-              id={`participant-${p.sid}`}
-              className="relative group aspect-video bg-white/5 rounded-[2.5rem] border border-white/10 overflow-hidden shadow-2xl"
+        {/* Dynamic Video Grid */}
+        <div className="flex-1 min-h-[500px] mb-24">
+          <div className={`grid gap-6 h-full transition-all duration-700 ${
+            participants.length === 0 ? 'grid-cols-1 max-w-4xl mx-auto' : 'grid-cols-1 lg:grid-cols-2'
+          }`}>
+            
+            {/* Local Stream View */}
+            <motion.div 
+              layout
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="relative group rounded-[2.5rem] overflow-hidden bg-white/5 border border-white/10 shadow-2xl transition-all duration-500 hover:border-white/20"
             >
-              <div className="absolute bottom-6 left-6 right-6 flex items-center justify-between z-20">
-                <div className="bg-black/60 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 flex items-center gap-2">
-                  <span className="text-[10px] font-black uppercase tracking-widest italic">{p.identity}</span>
+              <div id="local-video-container" className="w-full h-full" />
+              
+              <AnimatePresence>
+                {isVideoOff && (
+                  <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="absolute inset-0 flex flex-col items-center justify-center bg-[#0d0d0f]"
+                  >
+                    <div className="w-24 h-24 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mb-4">
+                      <div className="w-16 h-16 rounded-full bg-brand/20 flex items-center justify-center animate-pulse">
+                        <VideoOff className="w-8 h-8 text-brand" />
+                      </div>
+                    </div>
+                    <p className="text-xs font-mono text-white/40 uppercase tracking-widest">Cámara Desactivada</p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Status Overlay */}
+              <div className="absolute inset-x-0 bottom-0 p-6 bg-gradient-to-t from-black/80 to-transparent flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                <div className="flex items-center gap-3 bg-black/40 backdrop-blur-xl px-4 py-2 rounded-2xl border border-white/10">
+                  <div className="w-2 h-2 bg-brand rounded-full " />
+                  <span className="text-[10px] font-black uppercase tracking-widest italic">{user?.displayName || 'Mi Cámara'} (Tú)</span>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  {isMuted && (
+                    <div className="bg-red-500/20 backdrop-blur-xl p-2 rounded-xl border border-red-500/40">
+                      <MicOff className="w-4 h-4 text-red-500" />
+                    </div>
+                  )}
+                  <button 
+                    onClick={toggleCamera}
+                    className="bg-white/10 backdrop-blur-xl p-2 rounded-xl border border-white/10 hover:bg-white/20 transition-all"
+                  >
+                    <Camera className="w-4 h-4 text-white" />
+                  </button>
                 </div>
               </div>
-            </div>
-          ))}
+            </motion.div>
 
-          {/* Empty States */}
-          {participants.length === 0 && (
-            <div className="aspect-video bg-white/5 rounded-[2.5rem] border border-dashed border-white/10 flex flex-col items-center justify-center p-10 text-center">
-              <div className="w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mb-6">
-                <Share2 className="w-8 h-8 text-white/20" />
-              </div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-white/20 mb-4">Esperando a otros participantes...</p>
-              <button 
-                onClick={copyLink}
-                className="text-brand text-[10px] font-black uppercase tracking-widest hover:underline"
-              >
-                Compartir enlace de invitación
-              </button>
-            </div>
-          )}
+            {/* Remote Participants / Empty State */}
+            <AnimatePresence mode="wait">
+              {participants.length > 0 ? (
+                <div id="remote-video-container" className="contents">
+                  {participants.map((p, idx) => (
+                    <motion.div 
+                      key={p.sid || idx}
+                      layout
+                      initial={{ scale: 0.95, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      className="relative group rounded-[2.5rem] overflow-hidden bg-white/5 border border-white/10 shadow-2xl transition-all duration-500 hover:border-white/20"
+                    >
+                      {/* Video is attached here by the service */}
+                      <div className="absolute inset-x-0 bottom-0 p-6 bg-gradient-to-t from-black/80 to-transparent flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                        <div className="flex items-center gap-3 bg-black/40 backdrop-blur-xl px-4 py-2 rounded-2xl border border-white/10">
+                          <div className="w-2 h-2 bg-emerald-500 rounded-full" />
+                          <span className="text-[10px] font-black uppercase tracking-widest italic">{p.identity || 'Participante'} </span>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              ) : (
+                <motion.div 
+                  layout
+                  initial={{ scale: 0.95, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="relative group aspect-video lg:aspect-auto rounded-[2.5rem] bg-white/5 border-2 border-dashed border-white/10 flex flex-col items-center justify-center p-12 text-center"
+                >
+                  <div className="w-20 h-20 rounded-full bg-brand/5 border border-brand/20 flex items-center justify-center mb-8 relative">
+                    <Users className="w-10 h-10 text-brand/40" />
+                    <div className="absolute -top-1 -right-1 w-4 h-4 bg-brand rounded-full animate-ping opacity-75" />
+                  </div>
+                  <h3 className="text-lg font-display font-bold text-white/80 mb-2">Sala de Espera Activa</h3>
+                  <p className="text-xs font-mono text-white/30 uppercase tracking-[0.2em] mb-8 leading-relaxed">
+                    Comparte el enlace con tus invitados<br />para comenzar la transmisión segura.
+                  </p>
+                  <button 
+                    onClick={copyLink}
+                    className="group px-8 py-3 rounded-2xl bg-brand text-white text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-3 shadow-[0_10px_30px_rgba(255,78,0,0.3)] hover:scale-105 active:scale-95 transition-all"
+                  >
+                    <Copy className="w-4 h-4" />
+                    Copia enlace y espera
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
 
-        {/* Controls */}
-        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50">
-          <div className="glass rounded-[2.5rem] border-white/10 p-4 flex items-center gap-4 shadow-2xl shadow-black/50 backdrop-blur-3xl">
+        {/* Premium Floating Toolbar */}
+        <motion.div 
+          initial={{ y: 50, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 px-8 py-4 rounded-[32px] bg-black/80 backdrop-blur-2xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex items-center gap-4 sm:gap-6"
+        >
+          <div className="flex items-center gap-3">
             <button 
               onClick={toggleMute}
-              className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-500 ${isMuted ? 'bg-red-500 text-white shadow-[0_0_20px_rgba(239,68,68,0.4)]' : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white'}`}
+              className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-500 ${
+                isMuted ? 'bg-red-500 text-white shadow-[0_0_20px_rgba(239,68,68,0.4)]' : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-brand border border-white/10'
+              }`}
             >
               {isMuted ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
             </button>
             
             <button 
               onClick={toggleVideo}
-              className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-500 ${isVideoOff ? 'bg-red-500 text-white shadow-[0_0_20px_rgba(239,68,68,0.4)]' : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white'}`}
+              className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-500 ${
+                isVideoOff ? 'bg-red-500 text-white shadow-[0_0_20px_rgba(239,68,68,0.4)]' : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-brand border border-white/10'
+              }`}
             >
               {isVideoOff ? <VideoOff className="w-6 h-6" /> : <Video className="w-6 h-6" />}
             </button>
+          </div>
 
-            <div className="w-px h-8 bg-white/10 mx-2" />
+          <div className="w-[1px] h-10 bg-white/10 mx-1" />
 
+          <div className="flex items-center gap-3">
             <button 
-              onClick={toggleCamera}
-              className="w-14 h-14 rounded-2xl bg-white/5 text-white/60 hover:bg-white/10 hover:text-white flex items-center justify-center transition-all"
-              title="Voltear Cámara"
+              onClick={copyLink}
+              className="w-14 h-14 rounded-2xl bg-white/5 text-white/60 hover:bg-brand/10 hover:text-brand flex items-center justify-center border border-white/10 transition-all"
+              title="Invitar"
             >
-              <Camera className="w-6 h-6" />
+              <Users className="w-6 h-6" />
             </button>
-
+            
             <button 
-              className="w-14 h-14 rounded-2xl bg-white/5 text-white/60 hover:bg-white/10 hover:text-white flex items-center justify-center transition-all"
-              title="Compartir Pantalla"
-            >
-              <Maximize className="w-6 h-6" />
-            </button>
-
-            <button 
-              className="w-14 h-14 rounded-2xl bg-white/5 text-white/60 hover:bg-white/10 hover:text-white flex items-center justify-center transition-all"
+              className="w-14 h-14 rounded-2xl bg-white/5 text-white/60 hover:bg-white/10 hover:text-white flex items-center justify-center border border-white/10 transition-all"
               title="Chat de Reunión"
             >
               <MessageSquare className="w-6 h-6" />
             </button>
-
-            <button 
-              className="w-14 h-14 rounded-2xl bg-white/5 text-white/60 hover:bg-white/10 hover:text-white flex items-center justify-center transition-all"
-              title="Ajustes"
-            >
-              <Settings className="w-6 h-6" />
-            </button>
-
-            <div className="w-px h-8 bg-white/10 mx-2" />
-
-            <button 
-              onClick={endCall}
-              className="bg-red-500 px-8 h-14 rounded-2xl text-[10px] font-black uppercase tracking-widest text-white hover:bg-red-600 transition-all shadow-[0_0_30px_rgba(239,68,68,0.3)] flex items-center gap-3 group"
-            >
-              <PhoneOff className="w-5 h-5 group-hover:rotate-12 transition-transform" />
-              <span>Finalizar</span>
-            </button>
           </div>
-        </div>
+
+          <div className="w-[1px] h-10 bg-white/10 mx-1" />
+
+          <button 
+            onClick={endCall}
+            className="group h-14 px-8 rounded-2xl bg-red-600 hover:bg-red-500 text-white text-[10px] font-black uppercase tracking-widest transition-all shadow-[0_10px_30px_rgba(220,38,38,0.3)] hover:scale-110 flex items-center gap-3"
+          >
+            <PhoneOff className="w-5 h-5 group-hover:rotate-12 transition-transform" />
+            <span className="hidden sm:inline">Finalizar</span>
+          </button>
+        </motion.div>
       </div>
 
-      <Toast 
-        message={toast.message}
-        type={toast.type}
-        isVisible={toast.isVisible}
-        onClose={() => setToast(prev => ({ ...prev, isVisible: false }))}
-      />
+      <AnimatePresence>
+        {toast.isVisible && (
+          <Toast 
+            message={toast.message} 
+            type={toast.type} 
+            isVisible={toast.isVisible}
+            onClose={() => setToast({ ...toast, isVisible: false })} 
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

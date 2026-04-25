@@ -42,7 +42,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               email: firebaseUser.email || '',
               emailLowercase: (firebaseUser.email || '').toLowerCase(),
               photoURL: firebaseUser.photoURL || '',
-              role: firebaseUser.email === 'jonyoax95@gmail.com' ? 'admin' : 'user',
+              role: firebaseUser.email === 'jonyfree374@gmail.com' ? 'admin' : 'user',
               createdAt: serverTimestamp(),
             };
             try {
@@ -55,7 +55,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const currentData = userDoc.data() as UserProfile;
             const updates: any = {};
             
-            if (firebaseUser.email === 'jonyoax95@gmail.com' && currentData.role !== 'admin') {
+            if (firebaseUser.email === 'jonyfree374@gmail.com' && currentData.role !== 'admin') {
                updates.role = 'admin';
             }
             
