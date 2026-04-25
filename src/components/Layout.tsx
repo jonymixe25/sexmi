@@ -2,15 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import { db, doc, getDoc, collection, query, where, getDocs, limit as firestoreLimit, onSnapshot } from '../firebase';
-import { Home, User, Users, Video, LogOut, LogIn, Menu, X, Shield, Newspaper, Folder, Search, Play, ArrowRight, Film, Radio, MessageSquare, Youtube } from 'lucide-react';
+import { Home, User, Users, Video, LogOut, LogIn, Menu, X, Shield, Newspaper, Folder, Search, Play, ArrowRight, Film, Radio, MessageSquare, Youtube, Smartphone, Laptop } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import LoginModal from './LoginModal';
 import Toast from './Toast';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [showWelcomeToast, setShowWelcomeToast] = useState(false);
@@ -146,9 +148,16 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                   <span className="text-2xl md:text-3xl font-display font-black tracking-tighter uppercase italic leading-none">
                     {globalSettings?.appName?.split(' ')[0] || 'Voz'} <span className="text-[var(--primary-color,#ff4e00)]">{globalSettings?.appName?.split(' ').slice(1).join(' ') || 'Mixe'}</span>
                   </span>
-                  <span className="text-[8px] font-black uppercase tracking-[0.4em] text-white/20 mt-1">
-                    {enableMixe ? 'Ayuujk Jää' : 'Plataforma Digital'}
-                  </span>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-[8px] font-black uppercase tracking-[0.4em] text-white/20">
+                      {enableMixe ? 'Ayuujk Jää' : 'Plataforma Digital'}
+                    </span>
+                    <div className="w-px h-2 bg-white/10" />
+                    <div className="flex items-center gap-1 text-[8px] font-black uppercase tracking-widest text-brand/60">
+                      {isMobile ? <Smartphone className="w-2 h-2" /> : <Laptop className="w-2 h-2" />}
+                      <span>{isMobile ? 'Móvil' : 'Desktop'}</span>
+                    </div>
+                  </div>
                 </div>
               </Link>
             </div>

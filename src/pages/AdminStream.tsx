@@ -238,11 +238,38 @@ export default function AdminStream() {
             pc.addTrack(track, localStream.current!);
           });
 
+          // Handle incoming tracks (Duo Mode)
+          pc.ontrack = (event) => {
+            console.log('Received remote track from viewer (Duo Mode)', event.streams[0]);
+            if (remoteVideoContainerRef.current) {
+              const streamId = event.streams[0].id;
+              let video = remoteVideoContainerRef.current.querySelector(`video[data-stream-id="${streamId}"]`) as HTMLVideoElement;
+              
+              if (!video) {
+                video = document.createElement('video');
+                video.dataset.streamId = streamId;
+                video.autoplay = true;
+                video.playsInline = true;
+                video.className = "w-64 aspect-video object-cover rounded-2xl border-2 border-brand shadow-2xl pointer-events-auto";
+                remoteVideoContainerRef.current.appendChild(video);
+              }
+              video.srcObject = event.streams[0];
+            }
+          };
+
           // Handle ICE candidates
           pc.onicecandidate = (event) => {
             if (event.candidate) {
               webrtc.addIceCandidate(activeStream.id, viewerId, event.candidate, 'broadcaster');
             }
+          };
+
+          // Negotiation needed - handle viewer adding tracks
+          pc.onnegotiationneeded = async () => {
+            console.log('Renegotiating with viewer:', viewerId);
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            await webrtc.setOffer(activeStream.id, viewerId, offer);
           };
 
           // Create offer
@@ -252,13 +279,33 @@ export default function AdminStream() {
 
           // Listen for answer
           const unsubscribeAnswer = webrtc.listenForAnswer(activeStream.id, viewerId, async (answer) => {
-            await pc.setRemoteDescription(new RTCSessionDescription(answer));
-            console.log(`Handshake complete for viewer: ${viewerId}`);
+            try {
+              if (pc.signalingState !== 'stable') {
+                await pc.setRemoteDescription(new RTCSessionDescription(answer));
+                console.log(`Handshake complete for viewer: ${viewerId}`);
+              }
+            } catch (e) {
+              console.error('Answer setting error:', e);
+            }
+          });
+
+          // Listen for new offers from viewer (if they initiate)
+          const signalRef = doc(db, 'streams', activeStream.id, 'signaling', viewerId);
+          const unsubscribeRemoteOffer = onSnapshot(signalRef, async (snapshot) => {
+            const data = snapshot.data();
+            // If viewer sends a new offer (e.g. they started sharing camera)
+            if (data && data.offer && data.status === 'offer-sent' && pc.signalingState === 'stable') {
+               console.log('Received remote offer from viewer, creating answer...');
+               await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+               const answer = await pc.createAnswer();
+               await pc.setLocalDescription(answer);
+               await webrtc.setAnswer(activeStream.id, viewerId, answer);
+            }
           });
 
           // Listen for remote ICE candidates
           const unsubscribeRemoteIce = webrtc.listenForIceCandidates(activeStream.id, viewerId, 'broadcaster', (candidate) => {
-            pc.addIceCandidate(candidate);
+            pc.addIceCandidate(candidate).catch(e => console.warn('ICE error:', e));
           });
 
           pc.onconnectionstatechange = () => {
@@ -268,6 +315,9 @@ export default function AdminStream() {
               peerConnections.current.delete(viewerId);
               unsubscribeAnswer();
               unsubscribeRemoteIce();
+              unsubscribeRemoteOffer();
+                   const video = remoteVideoContainerRef.current?.querySelector(`video[data-stream-id]`);
+                   if (video) video.remove();
             }
           };
         });

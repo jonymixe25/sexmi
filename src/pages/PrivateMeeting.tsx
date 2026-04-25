@@ -2,15 +2,25 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import * as webrtc from '../services/webrtcService';
-import { Video, Mic, MicOff, VideoOff, PhoneOff, Share2, Users, Settings, MessageSquare, Shield, Lock, Copy, Check, Maximize, PictureInPicture2, Camera } from 'lucide-react';
+import { Video, Mic, MicOff, VideoOff, PhoneOff, Share2, Users, Settings, MessageSquare, Shield, Lock, Copy, Check, Maximize, PictureInPicture2, Camera, Smartphone, Laptop } from 'lucide-react';
 import { db, doc, onSnapshot, getDoc } from '../firebase';
 import { motion, AnimatePresence } from 'motion/react';
 import Toast from '../components/Toast';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 export default function PrivateMeeting() {
   const { id: meetingId } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
+
+  useEffect(() => {
+    if (!meetingId) {
+      const uniqueId = Math.random().toString(36).substring(2, 12);
+      navigate(`/meeting/${uniqueId}`, { replace: true });
+    }
+  }, [meetingId, navigate]);
+
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [participants, setParticipants] = useState<any[]>([]);
@@ -180,9 +190,9 @@ export default function PrivateMeeting() {
         <motion.div 
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          className="flex flex-col sm:flex-row items-center justify-between gap-6 mb-10 bg-white/5 backdrop-blur-xl border border-white/10 p-6 rounded-[2rem]"
+          className={`flex ${isMobile ? 'flex-col' : 'flex-row'} items-center justify-between gap-6 mb-10 bg-white/5 backdrop-blur-xl border border-white/10 p-6 rounded-[2rem]`}
         >
-          <div className="flex items-center gap-5">
+          <div className="flex items-center gap-5 w-full sm:w-auto">
             <div className="relative">
               <div className="w-14 h-14 rounded-2xl bg-brand/20 flex items-center justify-center border border-brand/30 shadow-[0_0_20px_rgba(255,78,0,0.2)]">
                 <Shield className="w-7 h-7 text-brand" />
@@ -214,9 +224,9 @@ export default function PrivateMeeting() {
         </motion.div>
 
         {/* Dynamic Video Grid */}
-        <div className="flex-1 min-h-[500px] mb-24">
+        <div className={`flex-1 ${isMobile ? 'min-h-[300px]' : 'min-h-[500px]'} mb-24`}>
           <div className={`grid gap-6 h-full transition-all duration-700 ${
-            participants.length === 0 ? 'grid-cols-1 max-w-4xl mx-auto' : 'grid-cols-1 lg:grid-cols-2'
+            participants.length === 0 ? 'grid-cols-1 max-w-4xl mx-auto' : isMobile ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-2'
           }`}>
             
             {/* Local Stream View */}
@@ -323,55 +333,57 @@ export default function PrivateMeeting() {
         <motion.div 
           initial={{ y: 50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 px-8 py-4 rounded-[32px] bg-black/80 backdrop-blur-2xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex items-center gap-4 sm:gap-6"
+          className={`fixed ${isMobile ? 'bottom-4 px-4 py-3' : 'bottom-8 px-8 py-4'} left-1/2 -translate-x-1/2 z-50 rounded-[32px] bg-black/80 backdrop-blur-2xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex items-center gap-2 sm:gap-6`}
         >
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <button 
               onClick={toggleMute}
-              className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-500 ${
+              className={`${isMobile ? 'w-12 h-12' : 'w-14 h-14'} rounded-2xl flex items-center justify-center transition-all duration-500 ${
                 isMuted ? 'bg-red-500 text-white shadow-[0_0_20px_rgba(239,68,68,0.4)]' : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-brand border border-white/10'
               }`}
             >
-              {isMuted ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
+              {isMuted ? <MicOff className={isMobile ? "w-5 h-5" : "w-6 h-6"} /> : <Mic className={isMobile ? "w-5 h-5" : "w-6 h-6"} />}
             </button>
             
             <button 
               onClick={toggleVideo}
-              className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-500 ${
+              className={`${isMobile ? 'w-12 h-12' : 'w-14 h-14'} rounded-2xl flex items-center justify-center transition-all duration-500 ${
                 isVideoOff ? 'bg-red-500 text-white shadow-[0_0_20px_rgba(239,68,68,0.4)]' : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-brand border border-white/10'
               }`}
             >
-              {isVideoOff ? <VideoOff className="w-6 h-6" /> : <Video className="w-6 h-6" />}
+              {isVideoOff ? <VideoOff className={isMobile ? "w-5 h-5" : "w-6 h-6"} /> : <Video className={isMobile ? "w-5 h-5" : "w-6 h-6"} />}
             </button>
           </div>
 
           <div className="w-[1px] h-10 bg-white/10 mx-1" />
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <button 
               onClick={copyLink}
-              className="w-14 h-14 rounded-2xl bg-white/5 text-white/60 hover:bg-brand/10 hover:text-brand flex items-center justify-center border border-white/10 transition-all"
+              className={`${isMobile ? 'w-12 h-12' : 'w-14 h-14'} rounded-2xl bg-white/5 text-white/60 hover:bg-brand/10 hover:text-brand flex items-center justify-center border border-white/10 transition-all`}
               title="Invitar"
             >
-              <Users className="w-6 h-6" />
+              <Users className={isMobile ? "w-5 h-5" : "w-6 h-6"} />
             </button>
             
-            <button 
-              className="w-14 h-14 rounded-2xl bg-white/5 text-white/60 hover:bg-white/10 hover:text-white flex items-center justify-center border border-white/10 transition-all"
-              title="Chat de Reunión"
-            >
-              <MessageSquare className="w-6 h-6" />
-            </button>
+            {!isMobile && (
+              <button 
+                className="w-14 h-14 rounded-2xl bg-white/5 text-white/60 hover:bg-white/10 hover:text-white flex items-center justify-center border border-white/10 transition-all"
+                title="Chat de Reunión"
+              >
+                <MessageSquare className="w-6 h-6" />
+              </button>
+            )}
           </div>
 
           <div className="w-[1px] h-10 bg-white/10 mx-1" />
 
           <button 
             onClick={endCall}
-            className="group h-14 px-8 rounded-2xl bg-red-600 hover:bg-red-500 text-white text-[10px] font-black uppercase tracking-widest transition-all shadow-[0_10px_30px_rgba(220,38,38,0.3)] hover:scale-110 flex items-center gap-3"
+            className={`group ${isMobile ? 'h-12 px-5' : 'h-14 px-8'} rounded-2xl bg-red-600 hover:bg-red-500 text-white text-[10px] font-black uppercase tracking-widest transition-all shadow-[0_10px_30px_rgba(220,38,38,0.3)] hover:scale-110 flex items-center gap-3`}
           >
-            <PhoneOff className="w-5 h-5 group-hover:rotate-12 transition-transform" />
-            <span className="hidden sm:inline">Finalizar</span>
+            <PhoneOff className={isMobile ? "w-4 h-4" : "w-5 h-5"} />
+            {!isMobile && <span className="hidden sm:inline">Finalizar</span>}
           </button>
         </motion.div>
       </div>

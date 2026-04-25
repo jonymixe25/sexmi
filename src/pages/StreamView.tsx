@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI, Modality } from "@google/genai";
 import { useAuth } from '../AuthContext';
 import * as webrtc from '../services/webrtcService';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 import Toast from '../components/Toast';
 
@@ -14,7 +15,9 @@ const StreamView = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   const [stream, setStream] = useState<StreamSession | null>(null);
+  const [showChat, setShowChat] = useState(true);
   const [loading, setLoading] = useState(true);
   const [chat, setChat] = useState<ChatMessage[]>([]);
   const [message, setMessage] = useState('');
@@ -85,6 +88,7 @@ const StreamView = () => {
   };
   const viewerIdentity = user?.uid || anonymousId;
   const pcRef = useRef<RTCPeerConnection | null>(null);
+  const localDuoStreamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
     const q = query(
@@ -179,22 +183,30 @@ const StreamView = () => {
       
       console.log('Setting up viewer WebRTC connection...');
       const pc = new RTCPeerConnection({
-        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' }
+        ]
       });
       pcRef.current = pc;
 
       pc.ontrack = (event) => {
         console.log('Received remote track', event.streams[0]);
         if (videoRef.current) {
-          // Find existing video or create new
-          let video = videoRef.current.querySelector('video');
+          const streamId = event.streams[0].id;
+          let video = videoRef.current.querySelector(`video[data-stream-id="${streamId}"]`) as HTMLVideoElement;
+          
           if (!video) {
             video = document.createElement('video');
+            video.dataset.streamId = streamId;
             video.playsInline = true;
             video.autoplay = true;
-            video.className = "w-full h-full object-cover rounded-2xl border border-white/10";
+            video.className = "flex-1 w-full h-full object-cover rounded-2xl border border-white/10 shadow-2xl transition-all duration-500";
             videoRef.current.appendChild(video);
-            videoElementRef.current = video;
+            
+            if (videoRef.current.children.length === 1) {
+              videoElementRef.current = video;
+            }
           }
           video.srcObject = event.streams[0];
           setHasVideo(true);
@@ -207,6 +219,17 @@ const StreamView = () => {
         }
       };
 
+      pc.onnegotiationneeded = async () => {
+        try {
+          console.log('Negotiation needed for viewer...');
+          const offer = await pc.createOffer();
+          await pc.setLocalDescription(offer);
+          await webrtc.setOffer(id, viewerIdentity, offer);
+        } catch (err) {
+          console.error('Negotiation error:', err);
+        }
+      };
+
       // Create signaling document
       await webrtc.createSignalDocument(id, viewerIdentity);
 
@@ -216,22 +239,27 @@ const StreamView = () => {
         const data = snapshot.data();
         if (data && data.offer && data.status === 'offer-sent') {
           console.log('Offer received, creating answer...');
-          await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
-          const answer = await pc.createAnswer();
-          await pc.setLocalDescription(answer);
-          await webrtc.setAnswer(id, viewerIdentity, answer);
+          try {
+            await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+            await webrtc.setAnswer(id, viewerIdentity, answer);
+          } catch (err) {
+            console.error('Error handling offer:', err);
+          }
         }
       });
 
       // Listen for remote ICE candidates
       const unsubscribeIce = webrtc.listenForIceCandidates(id, viewerIdentity, 'viewer', (candidate) => {
-        pc.addIceCandidate(candidate);
+        pc.addIceCandidate(candidate).catch(e => console.warn('ICE error:', e));
       });
 
       pc.onconnectionstatechange = () => {
+        console.log('Connection state:', pc.connectionState);
         if (pc.connectionState === 'connected') {
           setConnectionStatus('connected');
-        } else if (pc.connectionState === 'failed') {
+        } else if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
           setConnectionStatus('failed');
         }
       };
@@ -257,14 +285,49 @@ const StreamView = () => {
         pcRef.current.close();
         pcRef.current = null;
       }
+      if (localDuoStreamRef.current) {
+        localDuoStreamRef.current.getTracks().forEach(t => t.stop());
+      }
     };
   }, [id, navigate, viewerIdentity, user]);
 
+  // Duo mode activation
   useEffect(() => {
-    if (joinStatus === 'accepted') {
-      setToast({ message: 'Modo Duo aceptado. Próximamente integración WebRTC completa.', type: 'success', isVisible: true });
+    if (joinStatus === 'accepted' && pcRef.current && !localDuoStreamRef.current) {
+      const activateDuo = async () => {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+          localDuoStreamRef.current = stream;
+          stream.getTracks().forEach(track => pcRef.current?.addTrack(track, stream));
+          
+          if (videoRef.current) {
+            const localPreview = document.createElement('video');
+            localPreview.dataset.streamId = 'local-duo';
+            localPreview.srcObject = stream;
+            localPreview.muted = true;
+            localPreview.autoplay = true;
+            localPreview.playsInline = true;
+            localPreview.className = "w-1/3 aspect-video object-cover rounded-xl border-2 border-brand absolute bottom-4 right-4 z-40 shadow-2xl scale-x-[-1]";
+            videoRef.current.appendChild(localPreview);
+          }
+          
+          setToast({ message: 'Modo Duo activado. Tu señal se está transmitiendo.', type: 'success', isVisible: true });
+        } catch (err) {
+          console.error('Error activating Duo mode:', err);
+          setToast({ message: 'No se pudo acceder a tu cámara para el modo Duo', type: 'error', isVisible: true });
+        }
+      };
+      activateDuo();
     }
   }, [joinStatus]);
+
+  useEffect(() => {
+    if (isMobile) {
+      setShowChat(false);
+    } else {
+      setShowChat(true);
+    }
+  }, [isMobile]);
 
   const handleRequestJoin = async () => {
     if (!user || !id) return;
@@ -649,98 +712,115 @@ const StreamView = () => {
           </div>
         </div>
 
-        {/* Chat Overlay (Desktop) */}
-        <div className="absolute top-8 right-8 bottom-8 w-80 z-40 hidden lg:flex flex-col glass border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl opacity-0 group-hover:opacity-100 transition-all duration-500 translate-x-4 group-hover:translate-x-0">
-          <div className="p-6 border-b border-white/10 flex items-center justify-between bg-white/5">
-            <div className="flex items-center gap-2">
-              <MessageSquare className="w-4 h-4 text-[#ff4e00]" />
-              <span className="text-[10px] font-black uppercase tracking-widest">Chat en Vivo</span>
-            </div>
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-          </div>
-          
-          <div className="flex-1 overflow-y-auto p-6 space-y-4 scrollbar-hide">
-            {chat.map((msg) => (
-              <motion.div 
-                initial={{ opacity: 0, x: 10 }}
-                animate={{ opacity: 1, x: 0 }}
-                key={msg.id} 
-                className="flex flex-col gap-1"
-              >
+        {/* Chat Overlay (Desktop/Toggle) */}
+        <AnimatePresence>
+          {showChat && (
+            <motion.div 
+              initial={{ opacity: 0, x: 50 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 50 }}
+              className={`absolute top-8 right-8 bottom-8 ${isMobile ? 'left-8 w-auto' : 'w-80'} z-50 flex flex-col glass border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl transition-all duration-500`}
+            >
+              <div className="p-6 border-b border-white/10 flex items-center justify-between bg-white/5">
                 <div className="flex items-center gap-2">
-                  <span className={`text-[11px] font-medium ${msg.userId === stream?.userId ? 'text-[#ff4e00]' : 'text-white/80'}`}>
-                    {msg.userName}
-                  </span>
-                  {msg.userId === stream?.userId && (
-                    <Shield className="w-3 h-3 text-[#ff4e00]" />
-                  )}
-                  <span className="text-[9px] font-mono text-white/30">
-                    {msg.createdAt?.toDate ? new Date(msg.createdAt.toDate()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
-                  </span>
+                  <MessageSquare className="w-4 h-4 text-[#ff4e00]" />
+                  <span className="text-[10px] font-black uppercase tracking-widest">Chat en Vivo</span>
                 </div>
-                <div className="text-sm text-white/70 leading-relaxed">
-                  {msg.text && <p>{msg.text}</p>}
-                  {msg.imageUrl && (
-                    <img 
-                      src={msg.imageUrl} 
-                      alt="chat" 
-                      className="mt-2 rounded-xl w-full object-cover border border-white/10"
-                      referrerPolicy="no-referrer"
-                    />
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                  {isMobile && (
+                    <button onClick={() => setShowChat(false)} className="p-1 hover:bg-white/10 rounded-lg">
+                      <X className="w-4 h-4" />
+                    </button>
                   )}
-                </div>
-              </motion.div>
-            ))}
-          </div>
-
-          {user ? (
-            <form onSubmit={handleSendMessage} className="p-4 border-t border-white/5 bg-black/20">
-              <div className="relative flex items-center bg-white/5 border border-white/10 rounded-full p-1">
-                <input
-                  type="text"
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  placeholder="Escribe un mensaje..."
-                  className="flex-1 bg-transparent py-2 px-4 text-sm focus:outline-none text-white placeholder-white/30"
-                />
-                <div className="flex items-center gap-1 pr-1">
-                  <button
-                    type="button"
-                    onClick={handleReaction}
-                    className="w-8 h-8 rounded-full flex items-center justify-center text-white/40 hover:text-red-500 hover:bg-white/5 transition-all"
-                  >
-                    <Heart className="w-4 h-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => chatImageInputRef.current?.click()}
-                    className="w-8 h-8 rounded-full flex items-center justify-center text-white/40 hover:text-white hover:bg-white/5 transition-all"
-                  >
-                    <ImageIcon className="w-4 h-4" />
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={!message.trim()}
-                    className="w-8 h-8 rounded-full flex items-center justify-center bg-[#ff4e00] text-white disabled:opacity-50 disabled:bg-white/10 transition-all"
-                  >
-                    <Send className="w-3 h-3" />
-                  </button>
                 </div>
               </div>
-              <input
-                type="file"
-                ref={chatImageInputRef}
-                onChange={handleChatImageUpload}
-                className="hidden"
-                accept="image/*"
-              />
-            </form>
-          ) : (
-            <div className="p-4 border-t border-white/5 bg-black/20 text-center">
-              <p className="text-white/40 text-sm italic">Inicia sesión para participar en el chat</p>
-            </div>
+              
+              <div className="flex-1 overflow-y-auto p-6 space-y-4 scrollbar-hide">
+                {chat.map((msg) => (
+                  <motion.div 
+                    initial={{ opacity: 0, x: 10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    key={msg.id} 
+                    className="flex flex-col gap-1"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className={`text-[11px] font-medium ${msg.userId === stream?.userId ? 'text-[#ff4e00]' : 'text-white/80'}`}>
+                        {msg.userName}
+                      </span>
+                      {msg.userId === stream?.userId && (
+                        <Shield className="w-3 h-3 text-[#ff4e00]" />
+                      )}
+                      <span className="text-[9px] font-mono text-white/30">
+                        {msg.createdAt?.toDate ? new Date(msg.createdAt.toDate()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                      </span>
+                    </div>
+                    <div className="text-sm text-white/70 leading-relaxed">
+                      {msg.text && <p>{msg.text}</p>}
+                      {msg.imageUrl && (
+                        <img 
+                          src={msg.imageUrl} 
+                          alt="chat" 
+                          className="mt-2 rounded-xl w-full object-cover border border-white/10"
+                          referrerPolicy="no-referrer"
+                        />
+                      )}
+                    </div>
+                  </motion.div>
+                ))}
+                <div ref={chatEndRef} />
+              </div>
+
+              {user ? (
+                <form onSubmit={handleSendMessage} className="p-4 border-t border-white/5 bg-black/20">
+                  <div className="relative flex items-center bg-white/5 border border-white/10 rounded-full p-1">
+                    <input
+                      type="text"
+                      value={message}
+                      onChange={(e) => setMessage(e.target.value)}
+                      placeholder="Escribe un mensaje..."
+                      className="flex-1 bg-transparent py-2 px-4 text-sm focus:outline-none text-white placeholder-white/30"
+                    />
+                    <div className="flex items-center gap-1 pr-1">
+                      <button
+                        type="button"
+                        onClick={handleReaction}
+                        className="w-8 h-8 rounded-full flex items-center justify-center text-white/40 hover:text-red-500 hover:bg-white/5 transition-all"
+                      >
+                        <Heart className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => chatImageInputRef.current?.click()}
+                        className="w-8 h-8 rounded-full flex items-center justify-center text-white/40 hover:text-white hover:bg-white/5 transition-all"
+                      >
+                        <ImageIcon className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={!message.trim()}
+                        className="w-8 h-8 rounded-full flex items-center justify-center bg-[#ff4e00] text-white disabled:opacity-50 disabled:bg-white/10 transition-all"
+                      >
+                        <Send className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+                  <input
+                    type="file"
+                    ref={chatImageInputRef}
+                    onChange={handleChatImageUpload}
+                    className="hidden"
+                    accept="image/*"
+                  />
+                </form>
+              ) : (
+                <div className="p-4 border-t border-white/5 bg-black/20 text-center">
+                  <p className="text-white/40 text-sm italic">Inicia sesión para participar en el chat</p>
+                </div>
+              )}
+            </motion.div>
           )}
-        </div>
+        </AnimatePresence>
 
         {/* Bottom Controls Overlay */}
         <div className="absolute bottom-0 left-0 right-0 p-4 md:p-8 z-30 bg-gradient-to-t from-black/95 via-black/60 to-transparent opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-500">
@@ -794,6 +874,15 @@ const StreamView = () => {
             </div>
 
             <div className="flex items-center gap-2 md:gap-3 w-full md:w-auto justify-end">
+              <button
+                onClick={() => setShowChat(!showChat)}
+                className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center transition-all ${
+                  showChat ? 'bg-brand text-white shadow-[0_0_20px_rgba(255,78,0,0.3)]' : 'bg-white/10 text-white/60 hover:bg-white/20'
+                }`}
+                title="Toggle Chat"
+              >
+                <MessageSquare className="w-5 h-5" />
+              </button>
               {user && user.uid !== stream.userId && (
                 <button
                   onClick={handleRequestJoin}
