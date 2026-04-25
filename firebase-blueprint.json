@@ -1,0 +1,265 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "displayNameLowercase": { "type": "string" },
+        "email": { "type": "string" },
+        "emailLowercase": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "bio": { "type": "string" },
+        "socialLinks": { 
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "platform": { "type": "string" },
+              "url": { "type": "string" }
+            }
+          }
+        },
+        "role": { "type": "string", "enum": ["admin", "user"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "displayName", "email"]
+    },
+    "Stream": {
+      "title": "Live Stream",
+      "description": "Live stream session information",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "thumbnailUrl": { "type": "string" },
+        "category": { "type": "string", "enum": ["cultura", "musica", "tradicion", "noticias"] },
+        "status": { "type": "string", "enum": ["live", "ended"] },
+        "startedAt": { "type": "string", "format": "date-time" },
+        "endedAt": { "type": "string", "format": "date-time" },
+        "viewerCount": { "type": "number" },
+        "likes": { "type": "number" },
+        "privacy": { "type": "string", "enum": ["public", "private"] },
+        "latency": { "type": "string", "enum": ["normal", "low"] },
+        "resolution": { "type": "string", "enum": ["720p", "1080p"] }
+      },
+      "required": ["userId", "userName", "title", "status", "startedAt", "viewerCount", "likes"]
+    },
+    "Contact": {
+      "title": "Contact",
+      "description": "User contact/friend relationship",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "contactId": { "type": "string" },
+        "contactName": { "type": "string" },
+        "contactPhoto": { "type": "string" },
+        "addedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "contactId"]
+    },
+    "News": {
+      "title": "News Article",
+      "description": "News and cultural updates",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "content", "authorId", "createdAt"]
+    },
+    "Media": {
+      "title": "Media Item",
+      "description": "Uploaded image or media file metadata",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "url": { "type": "string" },
+        "folder": { "type": "string" },
+        "fileName": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "url", "folder", "fileName", "createdAt"]
+    },
+    "Message": {
+      "title": "Chat Message",
+      "description": "Real-time chat message for a stream",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "text": { "type": "string" },
+        "isPinned": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "userName", "text", "createdAt"]
+    },
+    "PrivateMessage": {
+      "title": "Private Message",
+      "description": "Direct message between users",
+      "type": "object",
+      "properties": {
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string" },
+        "text": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["senderId", "senderName", "text", "createdAt"]
+    },
+    "JoinRequest": {
+      "title": "Join Request",
+      "description": "Request from a viewer to join the live stream",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "accepted", "rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "userName", "status", "createdAt"]
+    },
+    "Call": {
+      "title": "Video Call Signaling",
+      "description": "Signaling data for a video call",
+      "type": "object",
+      "properties": {
+        "callerId": { "type": "string" },
+        "receiverId": { "type": "string" },
+        "status": { "type": "string", "enum": ["calling", "connected", "ended"] },
+        "offer": { "type": "object" },
+        "answer": { "type": "object" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["callerId", "receiverId", "status", "createdAt"]
+    },
+    "Settings": {
+      "title": "Global Settings",
+      "description": "Global application configuration settings",
+      "type": "object",
+      "properties": {
+        "appName": { "type": "string" },
+        "themeColor": { "type": "string" },
+        "contactEmail": { "type": "string" }
+      },
+      "required": ["appName"]
+    },
+    "CommunityMessage": {
+      "title": "Community Chat Message",
+      "description": "Global community chat message",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userPhoto": { "type": "string" },
+        "text": { "type": "string" },
+        "type": { "type": "string", "enum": ["text", "system"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "userName", "text", "createdAt"]
+    },
+    "RadioPlaylist": {
+      "title": "Radio Playlist Item",
+      "description": "Audio file in the radio playlist",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "artist": { "type": "string" },
+        "url": { "type": "string" },
+        "duration": { "type": "number" },
+        "addedBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "url", "addedBy", "createdAt"]
+    },
+    "RadioStatus": {
+      "title": "Radio Status",
+      "description": "Global radio broadcast status",
+      "type": "object",
+      "properties": {
+        "isLive": { "type": "boolean" },
+        "currentTrack": { "type": "string" },
+        "startedAt": { "type": "string", "format": "date-time" },
+        "viewers": { "type": "number" }
+      },
+      "required": ["isLive"]
+    }
+  },
+  "firestore": {
+    "/users/{uid}": {
+      "schema": "User",
+      "description": "User profile documents"
+    },
+    "/streams/{streamId}": {
+      "schema": "Stream",
+      "description": "Live stream session documents"
+    },
+    "/streams/{streamId}/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Chat messages subcollection"
+    },
+    "/users/{uid}/contacts/{contactId}": {
+      "schema": "Contact",
+      "description": "User contacts subcollection"
+    },
+    "/news/{newsId}": {
+      "schema": "News",
+      "description": "News articles collection"
+    },
+    "/media/{mediaId}": {
+      "schema": "Media",
+      "description": "Media items collection"
+    },
+    "/chats/{chatId}/messages/{messageId}": {
+      "schema": "PrivateMessage",
+      "description": "Private messages subcollection"
+    },
+    "/streams/{streamId}/joinRequests/{requestId}": {
+      "schema": "JoinRequest",
+      "description": "Requests to join a stream"
+    },
+    "/streams/{streamId}/guestSignaling/{guestId}": {
+      "schema": "object",
+      "description": "WebRTC signaling for guest streams"
+    },
+    "/calls/{chatId}": {
+      "schema": "Call",
+      "description": "Video call signaling documents"
+    },
+    "/calls/{chatId}/callerCandidates/{candidateId}": {
+      "schema": "object",
+      "description": "ICE candidates from the caller"
+    },
+    "/calls/{chatId}/receiverCandidates/{candidateId}": {
+      "schema": "object",
+      "description": "ICE candidates from the receiver"
+    },
+    "/settings/global": {
+      "schema": "Settings",
+      "description": "Global application settings"
+    },
+    "/community_chat/{messageId}": {
+      "schema": "CommunityMessage",
+      "description": "Global community chat messages"
+    },
+    "/radio_playlist/{trackId}": {
+      "schema": "RadioPlaylist",
+      "description": "Radio playlist items"
+    },
+    "/settings/radio_status": {
+      "schema": "RadioStatus",
+      "description": "Current radio broadcast status"
+    }
+  }
+}
